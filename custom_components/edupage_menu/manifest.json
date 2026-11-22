@@ -1,6 +1,10 @@
 {
   "domain": "edupage_menu",
   "name": "EduPage Menu Calendar",
+  "categories": [
+    "productivity_information.calendars_todos",
+    "appliances_cleaning.cooking"
+  ],
   "codeowners": ["@Flower7C3"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "lovelace"],
