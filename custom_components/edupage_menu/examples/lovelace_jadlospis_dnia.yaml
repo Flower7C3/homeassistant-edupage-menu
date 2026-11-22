@@ -20,6 +20,10 @@ show_picker: true
 # show_title: true
 # append_date: true         # dopisz datę przy własnym title
 #
-# sensor.*_dziś — tylko „na dziś”, ignoruje select (bez pickera):
+# sensor menu — dziś: stałe menu na dziś (dropdown tylko zmienia select, nie listę):
 # sensor_entity: sensor.edupage_menu_today
-# show_picker: false
+# show_picker: true   # opcjonalnie; karta pokaże ostrzeżenie
+#
+# sensor menu — wybrana data + picker: lista idzie za dropdownem:
+# sensor_entity: sensor.edupage_menu_picked
+# show_picker: true

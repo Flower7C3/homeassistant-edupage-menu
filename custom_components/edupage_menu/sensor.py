@@ -15,10 +15,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_URL, DOMAIN
 from .menu_helpers import (
-    default_menu_date,
+    entry_display_options,
     items_by_date,
     label_to_date,
     menu_item_attributes,
+    next_menu_date,
+    resolve_today_menu_date,
 )
 from .select import SIGNAL_SELECTED
 
@@ -47,7 +49,14 @@ async def async_setup_entry(
                 entry.entry_id,
                 entry.data[CONF_URL],
             ),
+            EdupageMenuNextSensor(
+                data["coordinator"],
+                data["name"],
+                entry.entry_id,
+                entry.data[CONF_URL],
+            ),
         ],
+        update_before_add=True,
     )
 
 
@@ -60,6 +69,7 @@ class EdupageMenuListSensor(CoordinatorEntity, SensorEntity):
 
     def __init__(self, coordinator, name: str, entry_id: str, url: str) -> None:
         super().__init__(coordinator)
+        self._entry_id = entry_id
         self._attr_unique_id = f"{entry_id}_menu_today"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -70,7 +80,50 @@ class EdupageMenuListSensor(CoordinatorEntity, SensorEntity):
 
     def _item(self) -> dict[str, Any] | None:
         items = self.coordinator.data or []
-        day = default_menu_date(items)
+        opts = entry_display_options(self.hass, self._entry_id)
+        day = resolve_today_menu_date(
+            items, fallback_next=opts["menu_today_fallback"]
+        )
+        if day is None:
+            return None
+        return items_by_date(items).get(day)
+
+    def _menu_attrs(self, item: dict[str, Any]) -> dict[str, Any]:
+        opts = entry_display_options(self.hass, self._entry_id)
+        return menu_item_attributes(item, show_weekday=opts["title_show_weekday"])
+
+    @property
+    def native_value(self) -> str | None:
+        item = self._item()
+        return item["date"].isoformat() if item else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        item = self._item()
+        return self._menu_attrs(item) if item else {}
+
+
+class EdupageMenuNextSensor(CoordinatorEntity, SensorEntity):
+    """Next school day's menu (Fri/Sat/Sun → Monday)."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "menu_next"
+    _attr_icon = "mdi:calendar-arrow-right"
+
+    def __init__(self, coordinator, name: str, entry_id: str, url: str) -> None:
+        super().__init__(coordinator)
+        self._entry_id = entry_id
+        self._attr_unique_id = f"{entry_id}_menu_next"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name=name,
+            manufacturer="EduPage",
+            configuration_url=url,
+        )
+
+    def _item(self) -> dict[str, Any] | None:
+        items = self.coordinator.data or []
+        day = next_menu_date(items)
         if day is None:
             return None
         return items_by_date(items).get(day)
@@ -83,7 +136,12 @@ class EdupageMenuListSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         item = self._item()
-        return menu_item_attributes(item) if item else {}
+        if item is None:
+            return {}
+        opts = entry_display_options(self.hass, self._entry_id)
+        attrs = menu_item_attributes(item, show_weekday=opts["title_show_weekday"])
+        attrs["date"] = item["date"].isoformat()
+        return attrs
 
 
 class EdupageMenuDaySensor(CoordinatorEntity, SensorEntity):
@@ -182,7 +240,8 @@ class EdupageMenuDaySensor(CoordinatorEntity, SensorEntity):
         item = self._selected_item()
         if item is None:
             return {}
-        attrs = menu_item_attributes(item)
+        opts = entry_display_options(self.hass, self._entry_id)
+        attrs = menu_item_attributes(item, show_weekday=opts["title_show_weekday"])
         if day := self._selected_date():
             attrs["date"] = day.isoformat()
         return attrs

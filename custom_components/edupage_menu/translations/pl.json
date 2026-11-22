@@ -24,7 +24,11 @@
       "init": {
         "title": "Ustawienia jadłospisu EduPage",
         "data": {
-          "scan_interval": "Interwał odświeżania (sekundy)"
+          "scan_interval": "Interwał odświeżania (sekundy)",
+          "weeks_back": "Tygodnie wstecz (dodatkowe strony jadłospisu)",
+          "weeks_ahead": "Tygodnie naprzód (dodatkowe strony jadłospisu)",
+          "title_show_weekday": "Dzień tygodnia w tytule jadłospisu",
+          "menu_today_fallback": "Menu — dziś: gdy brak dziś, pokaż najbliższy kolejny dzień"
         }
       }
     }
@@ -41,6 +45,9 @@
       },
       "menu_today": {
         "name": "Menu — dziś"
+      },
+      "menu_next": {
+        "name": "Menu — następny dzień"
       }
     },
     "calendar": {

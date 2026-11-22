@@ -8,6 +8,15 @@ DEFAULT_SCAN_INTERVAL = timedelta(hours=6)
 CONF_URL = "url"
 CONF_NAME = "name"
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_WEEKS_BACK = "weeks_back"
+CONF_WEEKS_AHEAD = "weeks_ahead"
+CONF_TITLE_SHOW_WEEKDAY = "title_show_weekday"
+CONF_MENU_TODAY_FALLBACK = "menu_today_fallback"
+
+DEFAULT_WEEKS_BACK = 1
+DEFAULT_WEEKS_AHEAD = 4
+DEFAULT_TITLE_SHOW_WEEKDAY = True
+DEFAULT_MENU_TODAY_FALLBACK = False
 
 REQUEST_HEADERS = {
     "User-Agent": "HomeAssistant/edupage_menu",
@@ -17,4 +26,4 @@ REQUEST_HEADERS = {
 
 URL_BASE = "/edupage_menu"
 JS_CARD_FILENAME = "edupage-menu-day.js"
-JS_CARD_VERSION = "7"
+JS_CARD_VERSION = "10"

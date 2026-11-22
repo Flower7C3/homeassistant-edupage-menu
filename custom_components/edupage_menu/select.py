@@ -16,6 +16,7 @@ from .const import CONF_URL, DOMAIN
 from .menu_helpers import (
     date_label,
     default_menu_date,
+    entry_display_options,
     items_by_date,
     label_to_date,
     menu_item_attributes,
@@ -128,6 +129,7 @@ class EdupageMenuDaySelect(RestoreEntity, CoordinatorEntity, SelectEntity):
         item = self._menu_item()
         if item is None:
             return {}
-        attrs = menu_item_attributes(item)
+        opts = entry_display_options(self.hass, self._entry_id)
+        attrs = menu_item_attributes(item, show_weekday=opts["title_show_weekday"])
         attrs["date"] = self._selected_date.isoformat()
         return attrs

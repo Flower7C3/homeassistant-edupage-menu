@@ -15,9 +15,17 @@ from .const import (
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
+    CONF_MENU_TODAY_FALLBACK,
+    CONF_TITLE_SHOW_WEEKDAY,
+    CONF_WEEKS_AHEAD,
+    CONF_WEEKS_BACK,
+    DEFAULT_MENU_TODAY_FALLBACK,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_TITLE_SHOW_WEEKDAY,
     DEFAULT_URL,
+    DEFAULT_WEEKS_AHEAD,
+    DEFAULT_WEEKS_BACK,
     DOMAIN,
     REQUEST_HEADERS,
 )
@@ -26,7 +34,7 @@ from .const import (
 class EdupageMenuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for EduPage Menu Calendar."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -63,6 +71,10 @@ class EdupageMenuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_SCAN_INTERVAL: user_input.get(
                             CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds())
                         ),
+                        CONF_WEEKS_BACK: DEFAULT_WEEKS_BACK,
+                        CONF_WEEKS_AHEAD: DEFAULT_WEEKS_AHEAD,
+                        CONF_TITLE_SHOW_WEEKDAY: DEFAULT_TITLE_SHOW_WEEKDAY,
+                        CONF_MENU_TODAY_FALLBACK: DEFAULT_MENU_TODAY_FALLBACK,
                     },
                 )
 
@@ -102,12 +114,32 @@ class EdupageMenuOptionsFlow(config_entries.OptionsFlow):
         current_interval = self._config_entry.options.get(
             CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds())
         )
+        weeks_back = self._config_entry.options.get(
+            CONF_WEEKS_BACK, DEFAULT_WEEKS_BACK
+        )
+        weeks_ahead = self._config_entry.options.get(
+            CONF_WEEKS_AHEAD, DEFAULT_WEEKS_AHEAD
+        )
+        title_weekday = self._config_entry.options.get(
+            CONF_TITLE_SHOW_WEEKDAY, DEFAULT_TITLE_SHOW_WEEKDAY
+        )
+        today_fallback = self._config_entry.options.get(
+            CONF_MENU_TODAY_FALLBACK, DEFAULT_MENU_TODAY_FALLBACK
+        )
         schema = vol.Schema(
             {
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=current_interval,
                 ): vol.All(vol.Coerce(int), vol.Range(min=900, max=86400)),
+                vol.Optional(CONF_WEEKS_BACK, default=weeks_back): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=12)
+                ),
+                vol.Optional(CONF_WEEKS_AHEAD, default=weeks_ahead): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=12)
+                ),
+                vol.Optional(CONF_TITLE_SHOW_WEEKDAY, default=title_weekday): bool,
+                vol.Optional(CONF_MENU_TODAY_FALLBACK, default=today_fallback): bool,
             }
         )
 

@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from . import format_menu_description
 from .const import CONF_URL, DOMAIN
+from .menu_helpers import entry_display_options, menu_title
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class EdupageMenuCalendar(CoordinatorEntity, CalendarEntity):
 
     def __init__(self, coordinator, name: str, entry_id: str, url: str) -> None:
         super().__init__(coordinator)
+        self._entry_id = entry_id
         self._attr_unique_id = f"{entry_id}_calendar"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -60,7 +62,8 @@ class EdupageMenuCalendar(CoordinatorEntity, CalendarEntity):
         menu_text = item.get("description") or format_menu_description(
             item.get("summary", "")
         )
-        title = f"Jadłospis ({day.strftime('%d.%m.%Y')})"
+        opts = entry_display_options(self.hass, self._entry_id)
+        title = menu_title(day, show_weekday=opts["title_show_weekday"])
         uid = hashlib.sha256(day.isoformat().encode()).hexdigest()[:16]
 
         return CalendarEvent(

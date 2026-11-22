@@ -5,6 +5,7 @@ import json
 import logging
 import re
 from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from aiohttp import ClientError
 from bs4 import BeautifulSoup
@@ -15,15 +16,25 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_MENU_TODAY_FALLBACK,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
+    CONF_TITLE_SHOW_WEEKDAY,
     CONF_URL,
+    CONF_WEEKS_AHEAD,
+    CONF_WEEKS_BACK,
+    DEFAULT_MENU_TODAY_FALLBACK,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_TITLE_SHOW_WEEKDAY,
+    DEFAULT_WEEKS_AHEAD,
+    DEFAULT_WEEKS_BACK,
     DOMAIN,
     REQUEST_HEADERS,
 )
@@ -43,6 +54,7 @@ _CLOSED_MENU_LABELS = frozenset({"zamknięte", "zamkniete", "closed"})
 _WEEKDAY_OPTION_RE = re.compile(
     r"^(Pon|Wt|Śr|Czw|Pt|So|Ni), \d{2}\.\d{2}\.\d{4}$"
 )
+_EDUPAGE_WIDGET_ID_RE = re.compile(r"menu_CanteenMenu_\d+", re.I)
 
 
 def _parse_date(raw: str) -> dt.date | None:
@@ -313,6 +325,75 @@ def _extract_from_html(html: str) -> list[dict[str, Any]]:
     return _dedupe_entries(entries)
 
 
+def _base_url_without_query(url: str) -> str:
+    parsed = urlparse(url.strip())
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+
+def _url_query_params(url: str) -> dict[str, str]:
+    parsed = urlparse(url.strip())
+    return {key: values[0] for key, values in parse_qs(parsed.query).items() if values}
+
+
+def _detect_canteen_widget_id(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    for node in soup.find_all(id=_EDUPAGE_WIDGET_ID_RE):
+        widget_id = node.get("id")
+        if widget_id:
+            return str(widget_id)
+    for node in soup.find_all(attrs={"data-sgid": re.compile(r"CanteenMenu", re.I)}):
+        sgid = str(node.get("data-sgid") or node.get("id") or "")
+        if "CanteenMenu" in sgid:
+            return sgid if sgid.startswith("menu_") else f"menu_{sgid}"
+    return None
+
+
+def build_menu_page_url(
+    base_url: str,
+    *,
+    wid: str | None,
+    anchor: dt.date | None,
+) -> str:
+    """Build EduPage menu URL with optional week navigation query params."""
+    base = _base_url_without_query(base_url)
+    params = _url_query_params(base_url)
+    if wid:
+        params["wid"] = wid
+    elif anchor is not None:
+        params.pop("date", None)
+    if anchor is not None:
+        params["date"] = anchor.isoformat()
+    if not params:
+        return base
+    return f"{base}?{urlencode(params)}"
+
+
+def _week_anchor_dates(weeks_back: int, weeks_ahead: int) -> list[dt.date]:
+    """Dates to pass as EduPage `date=` — one per calendar week in the range."""
+    today = dt_util.now().date()
+    return [
+        today + dt.timedelta(weeks=offset)
+        for offset in range(-weeks_back, weeks_ahead + 1)
+    ]
+
+
+def _menu_page_urls(
+    base_url: str,
+    *,
+    wid: str | None,
+    weeks_back: int,
+    weeks_ahead: int,
+) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for anchor in _week_anchor_dates(weeks_back, weeks_ahead):
+        page_url = build_menu_page_url(base_url, wid=wid, anchor=anchor)
+        if page_url not in seen:
+            seen.add(page_url)
+            ordered.append(page_url)
+    return ordered
+
+
 def _dedupe_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Deduplicate entries by date and summary."""
     seen: set[tuple[dt.date, str]] = set()
@@ -331,8 +412,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     async def _register_after_start(_event=None) -> None:
-        if hass.config_entries.async_entries(DOMAIN):
-            await _async_register_frontend(hass)
+        await _async_register_frontend(hass)
 
     if hass.state == CoreState.running:
         await _register_after_start()
@@ -370,23 +450,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     session = async_get_clientsession(hass)
+    weeks_back = int(entry.options.get(CONF_WEEKS_BACK, DEFAULT_WEEKS_BACK))
+    weeks_ahead = int(entry.options.get(CONF_WEEKS_AHEAD, DEFAULT_WEEKS_AHEAD))
+
+    async def _fetch_html(page_url: str) -> str:
+        async with session.get(page_url, timeout=20, headers=REQUEST_HEADERS) as resp:
+            resp.raise_for_status()
+            return await resp.text()
 
     async def _async_update_data() -> list[dict[str, Any]]:
+        widget_id = _url_query_params(url).get("wid")
+        pages: dict[str, str] = {}
+
         try:
-            async with session.get(url, timeout=20, headers=REQUEST_HEADERS) as resp:
-                resp.raise_for_status()
-                html = await resp.text()
+            pages[url] = await _fetch_html(url)
         except (ClientError, TimeoutError) as err:
             raise UpdateFailed(f"Błąd pobierania jadłospisu z {url}: {err}") from err
 
-        events = await hass.async_add_executor_job(parse_menu_page, html)
+        if not widget_id:
+            widget_id = _detect_canteen_widget_id(pages[url])
+
+        page_urls = _menu_page_urls(
+            url,
+            wid=widget_id,
+            weeks_back=weeks_back,
+            weeks_ahead=weeks_ahead,
+        )
+
+        for page_url in page_urls:
+            if page_url in pages:
+                continue
+            try:
+                pages[page_url] = await _fetch_html(page_url)
+            except (ClientError, TimeoutError) as err:
+                _LOGGER.warning("Pominięto tydzień jadłospisu (%s): %s", page_url, err)
+
+        events: list[dict[str, Any]] = []
+        for page_url, html in pages.items():
+            week_events = await hass.async_add_executor_job(parse_menu_page, html)
+            if week_events:
+                events.extend(week_events)
+            else:
+                _LOGGER.debug("Brak jadłospisu na %s", page_url)
+
+        events = _dedupe_entries(events)
         if events:
-            _LOGGER.info("Pobrano %d wpisów jadłospisu z %s", len(events), url)
+            _LOGGER.info(
+                "Pobrano %d dni jadłospisu (%d stron, wid=%s)",
+                len(events),
+                len(pages),
+                widget_id or "?",
+            )
         else:
             _LOGGER.warning(
-                "Nie znaleziono jadłospisu na stronie %s (len HTML=%d)",
+                "Nie znaleziono jadłospisu (źródło %s, %d stron)",
                 url,
-                len(html),
+                len(pages),
             )
         return events
 
@@ -409,11 +528,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "name": name,
         "selected_date": None,
+        "title_show_weekday": entry.options.get(
+            CONF_TITLE_SHOW_WEEKDAY, DEFAULT_TITLE_SHOW_WEEKDAY
+        ),
+        "menu_today_fallback": entry.options.get(
+            CONF_MENU_TODAY_FALLBACK, DEFAULT_MENU_TODAY_FALLBACK
+        ),
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _async_ensure_menu_next_sensor(hass, entry)
     await _async_register_frontend(hass)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
+    return True
+
+
+async def _async_ensure_menu_next_sensor(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Register menu_next on upgrades without re-adding the integration."""
+    registry = er.async_get(hass)
+    unique_id = f"{entry.entry_id}_menu_next"
+    if registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+        return
+
+    _LOGGER.info("Brak encji menu_next — ponowne ładowanie platformy sensor")
+    if not await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR]):
+        return
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Bump config entry version after entity additions."""
+    if config_entry.version < 2:
+        hass.config_entries.async_update_entry(config_entry, version=2)
     return True
 
 

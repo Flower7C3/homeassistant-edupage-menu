@@ -153,6 +153,17 @@ class EdupageMenuDayCard extends HTMLElement {
     const selectAttrs = selectId
       ? this._hass.states[selectId]?.attributes
       : null;
+    const sensorId = this._config.sensor_entity;
+
+    if (sensorId) {
+      const sensorAttrs = this._hass.states[sensorId]?.attributes || {};
+      if (sensorAttrs.markdown) {
+        return {
+          title: sensorAttrs.title || "Jadłospis",
+          markdown: sensorAttrs.markdown,
+        };
+      }
+    }
 
     if (
       this._config.show_picker &&
@@ -163,17 +174,6 @@ class EdupageMenuDayCard extends HTMLElement {
         title: selectAttrs.title || "Jadłospis",
         markdown: selectAttrs.markdown,
       };
-    }
-
-    const sensorId = this._config.sensor_entity;
-    if (sensorId) {
-      const sensorAttrs = this._hass.states[sensorId]?.attributes || {};
-      if (sensorAttrs.markdown) {
-        return {
-          title: sensorAttrs.title || "Jadłospis",
-          markdown: sensorAttrs.markdown,
-        };
-      }
     }
 
     if (selectAttrs?.markdown) {
@@ -201,6 +201,9 @@ class EdupageMenuDayCard extends HTMLElement {
       ha-card {
         padding: 0 0 16px;
         display: block;
+      }
+      ha-card.no-header {
+        padding-top: 16px;
       }
       .title {
         font-size: 1.25rem;
@@ -235,6 +238,7 @@ class EdupageMenuDayCard extends HTMLElement {
     this.appendChild(style);
 
     const card = document.createElement("ha-card");
+    this._cardEl = card;
     this._titleEl = document.createElement("div");
     this._titleEl.className = "title";
     card.appendChild(this._titleEl);
@@ -323,17 +327,15 @@ class EdupageMenuDayCard extends HTMLElement {
     const { title: entityTitle, markdown } = this._menuAttributes();
     const title = this._resolveCardTitle(entityTitle);
 
-    const wrongSensor =
+    const todaySensorPinned =
       this._config.show_picker &&
       this._config.sensor_entity &&
-      isTodaySensor(this._config.sensor_entity, this._hass) &&
-      this._config.select_entity &&
-      !this._hass.states[this._config.select_entity]?.attributes?.markdown;
+      isTodaySensor(this._config.sensor_entity, this._hass);
 
-    if (wrongSensor) {
+    if (todaySensorPinned) {
       this._hintEl.hidden = false;
       this._hintEl.textContent =
-        "Podłączono „Menu — dziś”. Przy wyborze dnia treść bierze się z encji „Wybór dnia” (usuń złý sensor z karty lub użyj „Menu — wybrana data”).";
+        "Menu z „Menu — dziś” (kalendarz). Dropdown nie zmienia listy — użyj „Menu — wybrana data” albo usuń sensor i zostaw sam Wybór dnia.";
     } else {
       this._hintEl.hidden = true;
     }
@@ -341,9 +343,11 @@ class EdupageMenuDayCard extends HTMLElement {
     if (title === null) {
       this._titleEl.hidden = true;
       this._titleEl.textContent = "";
+      this._cardEl.classList.add("no-header");
     } else {
       this._titleEl.hidden = false;
       this._titleEl.textContent = title;
+      this._cardEl.classList.remove("no-header");
     }
     this._markdownEl.content = markdown;
   }

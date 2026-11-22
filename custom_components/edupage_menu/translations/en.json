@@ -24,7 +24,11 @@
       "init": {
         "title": "EduPage menu settings",
         "data": {
-          "scan_interval": "Refresh interval (seconds)"
+          "scan_interval": "Refresh interval (seconds)",
+          "weeks_back": "Weeks before current (extra menu pages)",
+          "weeks_ahead": "Weeks after current (extra menu pages)",
+          "title_show_weekday": "Show weekday in menu titles",
+          "menu_today_fallback": "Menu — today: show next day when today is missing"
         }
       }
     }
@@ -41,6 +45,9 @@
       },
       "menu_today": {
         "name": "Menu — today"
+      },
+      "menu_next": {
+        "name": "Menu — next school day"
       }
     },
     "calendar": {

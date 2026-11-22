@@ -32,6 +32,38 @@ def items_by_date(items: list[dict[str, Any]]) -> dict[dt.date, dict[str, Any]]:
     }
 
 
+def next_school_menu_day(from_day: dt.date) -> dt.date:
+    """Next school day after from_day (Fri/Sat/Sun → following Monday)."""
+    weekday = from_day.weekday()
+    if weekday == 4:
+        return from_day + dt.timedelta(days=3)
+    if weekday == 5:
+        return from_day + dt.timedelta(days=2)
+    if weekday == 6:
+        return from_day + dt.timedelta(days=1)
+    return from_day + dt.timedelta(days=1)
+
+
+def next_menu_date(items: list[dict[str, Any]]) -> dt.date | None:
+    """Menu for the next school day from today (skips weekends)."""
+    by_date = items_by_date(items)
+    if not by_date:
+        return None
+
+    target = next_school_menu_day(dt_util.now().date())
+    for day in sorted(by_date):
+        if day >= target:
+            return day
+    return None
+
+
+def calendar_today_menu_date(items: list[dict[str, Any]]) -> dt.date | None:
+    """Calendar today only when that day exists in the menu data."""
+    today = dt_util.now().date()
+    by_date = items_by_date(items)
+    return today if today in by_date else None
+
+
 def default_menu_date(items: list[dict[str, Any]]) -> dt.date | None:
     """Pick today when available, otherwise the nearest future day."""
     by_date = items_by_date(items)
@@ -49,7 +81,26 @@ def default_menu_date(items: list[dict[str, Any]]) -> dt.date | None:
     return max(by_date)
 
 
-def menu_item_attributes(item: dict[str, Any]) -> dict[str, str]:
+def resolve_today_menu_date(
+    items: list[dict[str, Any]], *, fallback_next: bool
+) -> dt.date | None:
+    """Menu — today: strict calendar day or optional fallback to next available."""
+    if (today := calendar_today_menu_date(items)) is not None:
+        return today
+    if fallback_next:
+        return default_menu_date(items)
+    return None
+
+
+def menu_title(day: dt.date, *, show_weekday: bool) -> str:
+    if show_weekday:
+        return f"Jadłospis ({WEEKDAYS_PL[day.weekday()]}, {day.strftime('%d.%m.%Y')})"
+    return f"Jadłospis ({day.strftime('%d.%m.%Y')})"
+
+
+def menu_item_attributes(
+    item: dict[str, Any], *, show_weekday: bool = False
+) -> dict[str, str]:
     """Build title, markdown and plain description for a menu day."""
     day: dt.date = item["date"]
     markdown = item.get("markdown")
@@ -58,9 +109,28 @@ def menu_item_attributes(item: dict[str, Any]) -> dict[str, str]:
         markdown = format_menu_markdown(raw)
 
     return {
-        "title": f"Jadłospis ({day.strftime('%d.%m.%Y')})",
+        "title": menu_title(day, show_weekday=show_weekday),
         "markdown": markdown,
         "description": item.get("description") or item.get("summary", ""),
+    }
+
+
+def entry_display_options(hass, entry_id: str) -> dict[str, bool]:
+    """Read per-entry UI options stored in hass.data."""
+    from .const import (
+        DEFAULT_MENU_TODAY_FALLBACK,
+        DEFAULT_TITLE_SHOW_WEEKDAY,
+        DOMAIN,
+    )
+
+    data = hass.data.get(DOMAIN, {}).get(entry_id, {})
+    return {
+        "title_show_weekday": bool(
+            data.get("title_show_weekday", DEFAULT_TITLE_SHOW_WEEKDAY)
+        ),
+        "menu_today_fallback": bool(
+            data.get("menu_today_fallback", DEFAULT_MENU_TODAY_FALLBACK)
+        ),
     }
 
 
