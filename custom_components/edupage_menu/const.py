@@ -28,4 +28,4 @@ REQUEST_HEADERS = {
 
 URL_BASE = "/edupage_menu"
 JS_CARD_FILENAME = "edupage-menu-day.js"
-JS_CARD_VERSION = "20"
+JS_CARD_VERSION = "21"

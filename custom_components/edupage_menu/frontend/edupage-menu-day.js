@@ -125,19 +125,6 @@ class EdupageMenuDayCard extends HTMLElement {
           selector: { boolean: {} },
         },
         {
-          name: "picker_style",
-          label: "Sposób wyboru dnia",
-          default: "scroll",
-          selector: {
-            select: {
-              options: [
-                { label: "Przewijanie", value: "scroll" },
-                { label: "Lista rozwijana", value: "dropdown" },
-              ],
-            },
-          },
-        },
-        {
           name: "picker_arrows",
           label: "Strzałki poprzedni / następny dzień",
           default: false,
@@ -176,7 +163,6 @@ class EdupageMenuDayCard extends HTMLElement {
     this._btnPrev = null;
     this._btnNext = null;
     this._btnToday = null;
-    this._pickerScroll = null;
     this._pickerSelect = null;
     this._pickerLayoutKey = "";
     this._lastOptionsKey = "";
@@ -188,7 +174,6 @@ class EdupageMenuDayCard extends HTMLElement {
     }
     this._config = {
       show_picker: true,
-      picker_style: "scroll",
       picker_arrows: false,
       picker_today: true,
       show_title: true,
@@ -201,7 +186,6 @@ class EdupageMenuDayCard extends HTMLElement {
     this._btnPrev = null;
     this._btnNext = null;
     this._btnToday = null;
-    this._pickerScroll = null;
     this._pickerSelect = null;
     this._pickerLayoutKey = "";
     this._lastOptionsKey = "";
@@ -439,56 +423,6 @@ class EdupageMenuDayCard extends HTMLElement {
         background: var(--card-background-color, var(--ha-card-background, #fff));
         color: var(--primary-text-color, #212121);
       }
-      .day-scroll {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 4px 2px 8px;
-        scroll-snap-type: x proximity;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-      }
-      .day-scroll::-webkit-scrollbar {
-        height: 6px;
-      }
-      .day-chip {
-        flex: 0 0 auto;
-        scroll-snap-align: start;
-        min-width: 4.5rem;
-        padding: 8px 10px;
-        font: inherit;
-        font-size: 0.85rem;
-        line-height: 1.25;
-        text-align: center;
-        border-radius: 12px;
-        border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-        background: var(--card-background-color, var(--ha-card-background, #fff));
-        color: var(--primary-text-color, #212121);
-        cursor: pointer;
-      }
-      .day-chip .dow {
-        display: block;
-        font-weight: var(--ha-font-weight-medium, 500);
-      }
-      .day-chip .date {
-        display: block;
-        font-size: 0.75rem;
-        opacity: 0.85;
-        margin-top: 2px;
-      }
-      .day-chip[aria-current="true"] {
-        border-color: var(--primary-color);
-        background: var(--primary-color);
-        color: var(--text-primary-color, #fff);
-      }
-      .day-chip[aria-current="true"] .date {
-        opacity: 0.92;
-      }
-      .day-chip:focus-visible {
-        outline: 2px solid var(--primary-color);
-        outline-offset: 2px;
-      }
       .menu {
         padding: 0 16px;
       }
@@ -524,20 +458,6 @@ class EdupageMenuDayCard extends HTMLElement {
 
     this.appendChild(card);
     this._built = true;
-  }
-
-  _splitDayOption(label) {
-    if (!label || typeof label !== "string") {
-      return { dow: label || "", date: "" };
-    }
-    const comma = label.indexOf(", ");
-    if (comma === -1) {
-      return { dow: label, date: "" };
-    }
-    return {
-      dow: label.slice(0, comma),
-      date: label.slice(comma + 2),
-    };
   }
 
   _selectOptionsState() {
@@ -641,9 +561,7 @@ class EdupageMenuDayCard extends HTMLElement {
   _ensurePickerChrome() {
     const useArrows = this._config.picker_arrows === true;
     const useToday = this._config.picker_today === true;
-    const style =
-      this._config.picker_style === "dropdown" ? "dropdown" : "scroll";
-    const layoutKey = `${useArrows}|${useToday}|${style}`;
+    const layoutKey = `${useArrows}|${useToday}`;
 
     if (!this._pickerBar) {
       this._pickerBar = document.createElement("div");
@@ -687,7 +605,6 @@ class EdupageMenuDayCard extends HTMLElement {
 
     if (layoutKey !== this._pickerLayoutKey) {
       this._pickerLayoutKey = layoutKey;
-      this._pickerScroll = null;
       this._pickerSelect = null;
       this._lastOptionsKey = "";
       this._pickerBar.replaceChildren();
@@ -740,57 +657,6 @@ class EdupageMenuDayCard extends HTMLElement {
     this._updateDayNavButtons(options, current);
   }
 
-  _ensurePickerScroll(options, current, optionsKey) {
-    if (!this._pickerScroll) {
-      const scroll = document.createElement("div");
-      scroll.className = "day-scroll";
-      scroll.setAttribute("role", "listbox");
-      scroll.setAttribute("aria-label", "Wybierz dzień");
-      this._pickerInner.replaceChildren(scroll);
-      this._pickerScroll = scroll;
-    }
-
-    if (optionsKey === this._lastOptionsKey) {
-      this._updateDayNavButtons(options, current);
-      return;
-    }
-    this._lastOptionsKey = optionsKey;
-
-    this._pickerScroll.replaceChildren();
-    options.forEach((opt) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "day-chip";
-      btn.setAttribute("role", "option");
-      const { dow, date } = this._splitDayOption(opt);
-      if (date) {
-        btn.innerHTML = `<span class="dow"></span><span class="date"></span>`;
-        btn.querySelector(".dow").textContent = dow;
-        btn.querySelector(".date").textContent = date;
-      } else {
-        btn.textContent = opt;
-      }
-      if (opt === current) {
-        btn.setAttribute("aria-current", "true");
-      }
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        this._selectDayOption(opt);
-      });
-      this._pickerScroll.appendChild(btn);
-    });
-
-    const selected = this._pickerScroll.querySelector('[aria-current="true"]');
-    if (selected?.scrollIntoView) {
-      selected.scrollIntoView({
-        inline: "center",
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }
-    this._updateDayNavButtons(options, current);
-  }
-
   _ensurePicker() {
     if (!this._shouldShowPicker()) {
       this._pickerSlot.replaceChildren();
@@ -799,7 +665,6 @@ class EdupageMenuDayCard extends HTMLElement {
       this._btnPrev = null;
       this._btnNext = null;
       this._btnToday = null;
-      this._pickerScroll = null;
       this._pickerSelect = null;
       this._pickerLayoutKey = "";
       this._lastOptionsKey = "";
@@ -810,12 +675,7 @@ class EdupageMenuDayCard extends HTMLElement {
     const optionsKey = `${current}|${options.join(";")}|${this._pickerLayoutKey}`;
 
     this._ensurePickerChrome();
-
-    if (this._config.picker_style === "dropdown") {
-      this._ensurePickerDropdown(options, current, optionsKey);
-    } else {
-      this._ensurePickerScroll(options, current, optionsKey);
-    }
+    this._ensurePickerDropdown(options, current, optionsKey);
   }
 
   _ensureMarkdown() {
