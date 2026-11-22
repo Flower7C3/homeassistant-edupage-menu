@@ -1,0 +1,22 @@
+# --- Układ 1 (zalecany): kafelek + menu wybranego dnia ---
+# type: vertical-stack
+# cards:
+#   - type: tile
+#     entity: select.edupage_menu_day_picker
+#     features:
+#       - type: select-options
+#     features_position: bottom
+#   - type: custom:edupage-menu-day
+#     select_entity: select.edupage_menu_day_picker
+#     sensor_entity: sensor.edupage_menu_picked
+#     show_picker: false
+#
+# --- Układ 2: jedna karta (przycisk otwiera wybór dnia) ---
+type: custom:edupage-menu-day
+select_entity: select.edupage_menu_day_picker
+sensor_entity: sensor.edupage_menu_picked
+show_picker: true
+#
+# sensor.*_dziś — tylko „na dziś”, ignoruje select (bez pickera):
+# sensor_entity: sensor.edupage_menu_today
+# show_picker: false
