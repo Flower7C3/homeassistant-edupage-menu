@@ -17,6 +17,7 @@ from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -38,6 +39,8 @@ from .menu_helpers import weeks_range_from_options
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.SELECT]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 DATE_PATTERNS = [
     re.compile(r"\b(\d{4}-\d{2}-\d{2})\b"),
