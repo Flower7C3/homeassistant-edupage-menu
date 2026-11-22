@@ -1,7 +1,7 @@
 {
   "domain": "edupage_menu",
   "name": "EduPage Menu Calendar",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "config_flow": true,
   "dependencies": ["http", "frontend", "lovelace"],
   "documentation": "https://github.com/EdupageAPI/edupage-api/blob/master/edupage_api/lunches.py",

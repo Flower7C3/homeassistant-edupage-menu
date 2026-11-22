@@ -16,6 +16,9 @@ type: custom:edupage-menu-day
 select_entity: select.edupage_menu_day_picker
 sensor_entity: sensor.edupage_menu_picked
 show_picker: true
+# title: "Jadłospis"        # własny nagłówek (domyślnie z encji)
+# show_title: true
+# append_date: true         # dopisz datę przy własnym title
 #
 # sensor.*_dziś — tylko „na dziś”, ignoruje select (bez pickera):
 # sensor_entity: sensor.edupage_menu_today

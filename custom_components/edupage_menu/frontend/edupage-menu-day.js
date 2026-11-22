@@ -61,6 +61,21 @@ class EdupageMenuDayCard extends HTMLElement {
           default: true,
           selector: { boolean: {} },
         },
+        {
+          name: "title",
+          required: false,
+          selector: { text: {} },
+        },
+        {
+          name: "show_title",
+          default: true,
+          selector: { boolean: {} },
+        },
+        {
+          name: "append_date",
+          default: true,
+          selector: { boolean: {} },
+        },
       ],
     };
   }
@@ -76,7 +91,12 @@ class EdupageMenuDayCard extends HTMLElement {
     if (!config?.select_entity && !config?.sensor_entity) {
       throw new Error("Podaj encję Wybór dnia (select) lub sensor menu");
     }
-    this._config = { show_picker: true, ...config };
+    this._config = {
+      show_picker: true,
+      show_title: true,
+      append_date: true,
+      ...config,
+    };
     this._built = false;
     this._pickerSelect = null;
     this._lastOptionsKey = "";
@@ -90,6 +110,42 @@ class EdupageMenuDayCard extends HTMLElement {
 
   getCardSize() {
     return 4;
+  }
+
+  _formatMenuDate(iso) {
+    if (!iso || typeof iso !== "string") return "";
+    const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "";
+    return `${match[3]}.${match[2]}.${match[1]}`;
+  }
+
+  _menuDateIso() {
+    const selectId = this._config.select_entity;
+    const sensorId = this._config.sensor_entity;
+    return (
+      (selectId && this._hass.states[selectId]?.attributes?.date) ||
+      (sensorId && this._hass.states[sensorId]?.attributes?.date) ||
+      null
+    );
+  }
+
+  _resolveCardTitle(entityTitle) {
+    if (this._config.show_title === false) {
+      return null;
+    }
+
+    const custom = (this._config.title || "").trim();
+    if (custom) {
+      if (this._config.append_date !== false) {
+        const formatted = this._formatMenuDate(this._menuDateIso());
+        if (formatted) {
+          return `${custom} (${formatted})`;
+        }
+      }
+      return custom;
+    }
+
+    return entityTitle;
   }
 
   _menuAttributes() {
@@ -264,7 +320,8 @@ class EdupageMenuDayCard extends HTMLElement {
     this._ensurePicker();
     this._ensureMarkdown();
 
-    const { title, markdown } = this._menuAttributes();
+    const { title: entityTitle, markdown } = this._menuAttributes();
+    const title = this._resolveCardTitle(entityTitle);
 
     const wrongSensor =
       this._config.show_picker &&
@@ -281,7 +338,13 @@ class EdupageMenuDayCard extends HTMLElement {
       this._hintEl.hidden = true;
     }
 
-    this._titleEl.textContent = title;
+    if (title === null) {
+      this._titleEl.hidden = true;
+      this._titleEl.textContent = "";
+    } else {
+      this._titleEl.hidden = false;
+      this._titleEl.textContent = title;
+    }
     this._markdownEl.content = markdown;
   }
 }
