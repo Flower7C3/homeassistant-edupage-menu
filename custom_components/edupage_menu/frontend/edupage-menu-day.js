@@ -719,6 +719,5 @@ window.customCards.push({
   name: "Jadłospis dnia",
   description: "EduPage: wybór dnia i lista dań",
   preview: false,
-  documentationURL:
-    "https://github.com/EdupageAPI/edupage-api/blob/master/edupage_api/lunches.py",
+  documentationURL: "https://github.com/Flower7C3/homeassistant-edupage-menu",
 });
