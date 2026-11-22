@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jadłospis EduPage",
+        "description": "Publiczny jadłospis EduPage (bez logowania). Nazwa dotyczy urządzenia i wszystkich encji.",
+        "data": {
+          "url": "Adres URL jadłospisu",
+          "name": "Nazwa urządzenia (np. Jadłospis)",
+          "scan_interval": "Interwał odświeżania (sekundy)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie udało się połączyć z podanym adresem URL jadłospisu.",
+      "no_menu": "Strona odpowiada, ale nie znaleziono publicznego jadłospisu."
+    },
+    "abort": {
+      "already_configured": "Ten adres URL jadłospisu jest już skonfigurowany."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ustawienia jadłospisu EduPage",
+        "data": {
+          "scan_interval": "Interwał odświeżania (sekundy)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "day_picker": {
+        "name": "Wybór dnia"
+      }
+    },
+    "sensor": {
+      "menu_picked": {
+        "name": "Menu — wybrana data"
+      },
+      "menu_today": {
+        "name": "Menu — dziś"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Kalendarz"
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import datetime as dt
+from typing import Any
+
+from homeassistant.util import dt as dt_util
+
+from . import format_menu_markdown
+
+WEEKDAYS_PL = ("Pon", "Wt", "Śr", "Czw", "Pt", "So", "Ni")
+
+
+def date_label(day: dt.date) -> str:
+    """Human-friendly date label for select options."""
+    return f"{WEEKDAYS_PL[day.weekday()]}, {day.strftime('%d.%m.%Y')}"
+
+
+def label_to_date(label: str, items: list[dict[str, Any]]) -> dt.date | None:
+    """Resolve select label back to a date."""
+    for item in items:
+        day = item.get("date")
+        if isinstance(day, dt.date) and date_label(day) == label:
+            return day
+    return None
+
+
+def items_by_date(items: list[dict[str, Any]]) -> dict[dt.date, dict[str, Any]]:
+    return {
+        item["date"]: item
+        for item in items
+        if isinstance(item.get("date"), dt.date)
+    }
+
+
+def default_menu_date(items: list[dict[str, Any]]) -> dt.date | None:
+    """Pick today when available, otherwise the nearest future day."""
+    by_date = items_by_date(items)
+    if not by_date:
+        return None
+
+    today = dt_util.now().date()
+    if today in by_date:
+        return today
+
+    for day in sorted(by_date):
+        if day >= today:
+            return day
+
+    return max(by_date)
+
+
+def menu_item_attributes(item: dict[str, Any]) -> dict[str, str]:
+    """Build title, markdown and plain description for a menu day."""
+    day: dt.date = item["date"]
+    markdown = item.get("markdown")
+    if not markdown:
+        raw = item.get("summary") or item.get("description", "")
+        markdown = format_menu_markdown(raw)
+
+    return {
+        "title": f"Jadłospis ({day.strftime('%d.%m.%Y')})",
+        "markdown": markdown,
+        "description": item.get("description") or item.get("summary", ""),
+    }
+
+
+def option_labels(items: list[dict[str, Any]]) -> list[str]:
+    days = sorted(items_by_date(items))
+    return [date_label(day) for day in days]

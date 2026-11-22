@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EduPage lunch menu",
+        "description": "Public EduPage menu (no login). Name is used for the device and all entities.",
+        "data": {
+          "url": "Menu URL",
+          "name": "Device name",
+          "scan_interval": "Refresh interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the menu URL.",
+      "no_menu": "The page loaded but no public menu was found."
+    },
+    "abort": {
+      "already_configured": "This menu URL is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "EduPage menu settings",
+        "data": {
+          "scan_interval": "Refresh interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "day_picker": {
+        "name": "Day picker"
+      }
+    },
+    "sensor": {
+      "menu_picked": {
+        "name": "Menu — selected date"
+      },
+      "menu_today": {
+        "name": "Menu — today"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Calendar"
+      }
+    }
+  }
+}
