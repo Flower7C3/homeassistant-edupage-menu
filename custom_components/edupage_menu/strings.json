@@ -20,13 +20,15 @@
     }
   },
   "options": {
+    "error": {
+      "invalid_weeks_range": "Use back-forward weeks, e.g. 1-4 (0–12 each side)."
+    },
     "step": {
       "init": {
         "title": "EduPage menu settings",
         "data": {
           "scan_interval": "Refresh interval (seconds)",
-          "weeks_back": "Weeks before current (extra menu pages)",
-          "weeks_ahead": "Weeks after current (extra menu pages)",
+          "weeks_range": "Menu weeks (back–forward), e.g. 1-4",
           "title_show_weekday": "Show weekday in menu titles",
           "menu_today_fallback": "Menu — today: show next day when today is missing"
         }

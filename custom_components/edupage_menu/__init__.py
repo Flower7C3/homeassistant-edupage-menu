@@ -27,17 +27,14 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_TITLE_SHOW_WEEKDAY,
     CONF_URL,
-    CONF_WEEKS_AHEAD,
-    CONF_WEEKS_BACK,
     DEFAULT_MENU_TODAY_FALLBACK,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TITLE_SHOW_WEEKDAY,
-    DEFAULT_WEEKS_AHEAD,
-    DEFAULT_WEEKS_BACK,
     DOMAIN,
     REQUEST_HEADERS,
 )
+from .menu_helpers import weeks_range_from_options
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.SELECT]
@@ -450,8 +447,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     session = async_get_clientsession(hass)
-    weeks_back = int(entry.options.get(CONF_WEEKS_BACK, DEFAULT_WEEKS_BACK))
-    weeks_ahead = int(entry.options.get(CONF_WEEKS_AHEAD, DEFAULT_WEEKS_AHEAD))
+    weeks_back, weeks_ahead = weeks_range_from_options(entry.options)
 
     async def _fetch_html(page_url: str) -> str:
         async with session.get(page_url, timeout=20, headers=REQUEST_HEADERS) as resp:

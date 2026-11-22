@@ -12,23 +12,22 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import parse_menu_page
 from .const import (
+    CONF_MENU_TODAY_FALLBACK,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
-    CONF_URL,
-    CONF_MENU_TODAY_FALLBACK,
     CONF_TITLE_SHOW_WEEKDAY,
-    CONF_WEEKS_AHEAD,
-    CONF_WEEKS_BACK,
+    CONF_URL,
+    CONF_WEEKS_RANGE,
     DEFAULT_MENU_TODAY_FALLBACK,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TITLE_SHOW_WEEKDAY,
     DEFAULT_URL,
-    DEFAULT_WEEKS_AHEAD,
-    DEFAULT_WEEKS_BACK,
+    DEFAULT_WEEKS_RANGE,
     DOMAIN,
     REQUEST_HEADERS,
 )
+from .menu_helpers import options_weeks_range_default, parse_weeks_range
 
 
 class EdupageMenuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -71,8 +70,7 @@ class EdupageMenuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_SCAN_INTERVAL: user_input.get(
                             CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds())
                         ),
-                        CONF_WEEKS_BACK: DEFAULT_WEEKS_BACK,
-                        CONF_WEEKS_AHEAD: DEFAULT_WEEKS_AHEAD,
+                        CONF_WEEKS_RANGE: DEFAULT_WEEKS_RANGE,
                         CONF_TITLE_SHOW_WEEKDAY: DEFAULT_TITLE_SHOW_WEEKDAY,
                         CONF_MENU_TODAY_FALLBACK: DEFAULT_MENU_TODAY_FALLBACK,
                     },
@@ -108,18 +106,19 @@ class EdupageMenuOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            try:
+                parse_weeks_range(str(user_input[CONF_WEEKS_RANGE]))
+            except ValueError:
+                errors["base"] = "invalid_weeks_range"
+            if not errors:
+                return self.async_create_entry(title="", data=user_input)
 
         current_interval = self._config_entry.options.get(
             CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds())
         )
-        weeks_back = self._config_entry.options.get(
-            CONF_WEEKS_BACK, DEFAULT_WEEKS_BACK
-        )
-        weeks_ahead = self._config_entry.options.get(
-            CONF_WEEKS_AHEAD, DEFAULT_WEEKS_AHEAD
-        )
+        weeks_range = options_weeks_range_default(self._config_entry.options)
         title_weekday = self._config_entry.options.get(
             CONF_TITLE_SHOW_WEEKDAY, DEFAULT_TITLE_SHOW_WEEKDAY
         )
@@ -132,15 +131,12 @@ class EdupageMenuOptionsFlow(config_entries.OptionsFlow):
                     CONF_SCAN_INTERVAL,
                     default=current_interval,
                 ): vol.All(vol.Coerce(int), vol.Range(min=900, max=86400)),
-                vol.Optional(CONF_WEEKS_BACK, default=weeks_back): vol.All(
-                    vol.Coerce(int), vol.Range(min=0, max=12)
-                ),
-                vol.Optional(CONF_WEEKS_AHEAD, default=weeks_ahead): vol.All(
-                    vol.Coerce(int), vol.Range(min=0, max=12)
+                vol.Optional(CONF_WEEKS_RANGE, default=weeks_range): vol.All(
+                    str, vol.Match(r"^\d{1,2}-\d{1,2}$")
                 ),
                 vol.Optional(CONF_TITLE_SHOW_WEEKDAY, default=title_weekday): bool,
                 vol.Optional(CONF_MENU_TODAY_FALLBACK, default=today_fallback): bool,
             }
         )
 
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

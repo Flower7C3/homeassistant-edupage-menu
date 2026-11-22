@@ -5,7 +5,7 @@ from typing import Any
 
 from homeassistant.util import dt as dt_util
 
-from . import format_menu_markdown
+from .menu_format import format_menu_markdown
 
 WEEKDAYS_PL = ("Pon", "Wt", "Śr", "Czw", "Pt", "So", "Ni")
 
@@ -137,3 +137,50 @@ def entry_display_options(hass, entry_id: str) -> dict[str, bool]:
 def option_labels(items: list[dict[str, Any]]) -> list[str]:
     days = sorted(items_by_date(items))
     return [date_label(day) for day in days]
+
+
+def parse_weeks_range(raw: str) -> tuple[int, int]:
+    """Parse weeks range ``wstecz-naprzód``, e.g. ``1-4``."""
+    text = raw.strip().replace(" ", "")
+    if "-" not in text:
+        raise ValueError(f"Invalid weeks range: {raw}")
+    back_s, ahead_s = text.split("-", 1)
+    back, ahead = int(back_s), int(ahead_s)
+    if not (0 <= back <= 12 and 0 <= ahead <= 12):
+        raise ValueError(f"Weeks out of range: {raw}")
+    return back, ahead
+
+
+def weeks_range_from_options(options: dict) -> tuple[int, int]:
+    """Read weeks back/ahead from integration options (with legacy keys)."""
+    from .const import (
+        CONF_WEEKS_AHEAD,
+        CONF_WEEKS_BACK,
+        CONF_WEEKS_RANGE,
+        DEFAULT_WEEKS_AHEAD,
+        DEFAULT_WEEKS_BACK,
+        DEFAULT_WEEKS_RANGE,
+    )
+
+    if raw := options.get(CONF_WEEKS_RANGE):
+        try:
+            return parse_weeks_range(str(raw))
+        except ValueError:
+            pass
+    return (
+        int(options.get(CONF_WEEKS_BACK, DEFAULT_WEEKS_BACK)),
+        int(options.get(CONF_WEEKS_AHEAD, DEFAULT_WEEKS_AHEAD)),
+    )
+
+
+def format_weeks_range(back: int, ahead: int) -> str:
+    return f"{back}-{ahead}"
+
+
+def options_weeks_range_default(options: dict) -> str:
+    from .const import CONF_WEEKS_RANGE, DEFAULT_WEEKS_RANGE
+
+    if raw := options.get(CONF_WEEKS_RANGE):
+        return str(raw)
+    back, ahead = weeks_range_from_options(options)
+    return format_weeks_range(back, ahead)

@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from . import format_menu_description
+from .menu_format import format_menu_description
 from .const import CONF_URL, DOMAIN
 from .menu_helpers import entry_display_options, menu_title
 

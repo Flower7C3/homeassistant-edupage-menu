@@ -20,15 +20,17 @@
     }
   },
   "options": {
+    "error": {
+      "invalid_weeks_range": "Podaj zakres tygodni wstecz–naprzód, np. 1-4 (każda strona 0–12)."
+    },
     "step": {
       "init": {
         "title": "Ustawienia jadłospisu EduPage",
         "data": {
           "scan_interval": "Interwał odświeżania (sekundy)",
-          "weeks_back": "Tygodnie wstecz (dodatkowe strony jadłospisu)",
-          "weeks_ahead": "Tygodnie naprzód (dodatkowe strony jadłospisu)",
+          "weeks_range": "Tygodnie jadłospisu (wstecz–naprzód), np. 1-4",
           "title_show_weekday": "Dzień tygodnia w tytule jadłospisu",
-          "menu_today_fallback": "Menu — dziś: gdy brak dziś, pokaż najbliższy kolejny dzień"
+          "menu_today_fallback": "Menu — dzisiaj: gdy brak dziś, pokaż najbliższy kolejny dzień"
         }
       }
     }
@@ -44,7 +46,7 @@
         "name": "Menu — wybrana data"
       },
       "menu_today": {
-        "name": "Menu — dziś"
+        "name": "Menu — dzisiaj"
       },
       "menu_next": {
         "name": "Menu — następny dzień"
