@@ -20,3 +20,48 @@ jobs:
       - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa
         with:
           category: integration
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate-hassfest, validate-hacs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compare manifest version
+        id: version
+        run: |
+          manifest="custom_components/edupage_menu/manifest.json"
+          current="$(python3 -c "import json; print(json.load(open('${manifest}'))['version'])")"
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+
+          previous=""
+          if git rev-parse HEAD~1 >/dev/null 2>&1 \
+            && git cat-file -e "HEAD~1:${manifest}" 2>/dev/null; then
+            previous="$(git show "HEAD~1:${manifest}" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")"
+          fi
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+          echo "Manifest version: ${previous:-<none>} → ${current}"
+
+      - name: Skip when version unchanged
+        if: steps.version.outputs.current == steps.version.outputs.previous
+        run: echo "Version did not change; no release."
+
+      - name: Create GitHub release
+        if: steps.version.outputs.current != steps.version.outputs.previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.version.outputs.current }}"
+          if git rev-parse "refs/tags/${version}" >/dev/null 2>&1; then
+            echo "Tag ${version} already exists."
+            exit 0
+          fi
+          gh release create "${version}" \
+            --title "EduPage Menu ${version}" \
+            --generate-notes
