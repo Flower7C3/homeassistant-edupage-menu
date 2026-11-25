@@ -6,6 +6,12 @@ Last tested on Home Assistant **2026.11.1**. HACS requires **2023.8.0** or newer
 
 [Polski](README.pl.md)
 
+## Screenshot
+
+Lovelace card `custom:edupage-menu-day` (day dropdown, optional arrows and **Today**):
+
+![EduPage menu Lovelace card example](docs/images/lovelace-card-example.jpg)
+
 ## Install
 
 ### HACS (recommended)

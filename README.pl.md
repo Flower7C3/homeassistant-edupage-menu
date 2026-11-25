@@ -6,6 +6,12 @@ Ostatni test na Home Assistant **2026.11.1**. W HACS minimum **2023.8.0**; stars
 
 [English](README.md)
 
+## Zrzut ekranu
+
+Karta Lovelace `custom:edupage-menu-day` (lista dni, opcjonalnie strzałki i **Dziś**):
+
+![Przykład karty jadłospisu EduPage](docs/images/lovelace-card-example.jpg)
+
 ## Instalacja
 
 ### HACS (zalecane)
@@ -39,7 +45,7 @@ select_entity: select.jadlospis_wybor_dnia
 sensor_entity: sensor.jadlospis_menu_wybrana_data
 picker_arrows: true
 picker_today: true
-````
+```
 
 Przykłady: `custom_components/edupage_menu/examples/lovelace_jadlospis_dnia.yaml`.
 
